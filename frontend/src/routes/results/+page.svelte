@@ -150,20 +150,20 @@
 						<img
 							class="aspect-1/1 w-full rounded-t-md"
 							alt="noooo"
-							src={originals.get(job_id.toString())}
+							src={originals.get(results[0])}
 						/>
-						{metadata.get(job_id.toString())?.first_name +
+						{metadata.get(results[0])?.first_name +
 							' ' +
-							metadata.get(job_id.toString())?.last_name +
+							metadata.get(results[0])?.last_name +
 							"'s " +
-							metadata.get(job_id.toString())?.animal_name}
+							metadata.get(results[0])?.animal_name}
 					</Card>
 					{#each results[1] as image, index (index)}
 						<div class="col-span-1 grid grid-cols-1 grid-cols-subgrid">
 							{#snippet resultImage(url: string, enabled: boolean)}
 								<div transition:fade class="col-start-1 row-start-1">
 									<div class="result-images aspect-1/1 w-full rounded-t-md">
-										<PaintableImage imageSrc={url} enabled={enabled} />
+										<PaintableImage imageSrc={url} {enabled} />
 									</div>
 									<button
 										disabled={!enabled}
