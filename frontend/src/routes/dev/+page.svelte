@@ -13,7 +13,7 @@
 <div class="h-100 w-100 bg-gray-200">
 	<Tabs tabStyle="underline">
 		<TabItem open title="Image View">
-			<PaintableImage imageSrc="result_placeholder.png" />
+			<PaintableImage imageSrc="result_placeholder.png" enabled={true} />
 		</TabItem>
 		<TabItem title="List View">
 			<p class="m-4">List View.</p>
