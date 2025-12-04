@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { PUBLIC_BACKEND_URL } from '$env/static/public';
-	import { SeedlingSolid } from 'flowbite-svelte-icons';
 	import { onMount } from 'svelte';
 	import { triggerExplode } from './Explosion';
+	import { RectangleListOutline } from 'flowbite-svelte-icons';
 
 	let {
 		imageSrc = '',
@@ -15,7 +15,9 @@
 
 	let imgEl: HTMLImageElement | SVGElement;
 	let canvas: HTMLCanvasElement;
+	let pointerCanvas: HTMLCanvasElement;
 	let ctx: CanvasRenderingContext2D;
+	let pointerCtx: CanvasRenderingContext2D;
 	let dpr = 1;
 
 	// tools
@@ -43,14 +45,20 @@
 		// style size (CSS pixels)
 		canvas.style.width = cssW + 'px';
 		canvas.style.height = cssH + 'px';
+		pointerCanvas.style.width = cssW + 'px';
+		pointerCanvas.style.height = cssH + 'px';
 
 		// backing store (device pixels) for crisp lines
 		dpr = Math.max(1, window.devicePixelRatio || 1);
 		canvas.width = Math.round(cssW * dpr);
 		canvas.height = Math.round(cssH * dpr);
+		pointerCanvas.width = Math.round(cssW * dpr);
+		pointerCanvas.height = Math.round(cssH * dpr);
 
-		ctx = canvas.getContext('2d');
+		ctx = canvas.getContext('2d')!;
 		ctx.setTransform(dpr, 0, 0, dpr, 0, 0); // draw in CSS px coordinates
+		pointerCtx = pointerCanvas.getContext('2d')!;
+		pointerCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
 		// restore overlay if we had one
 		if (overlayDataUrl) {
@@ -80,7 +88,7 @@
 		}
 	}
 
-	function restoreFrom(url) {
+	function restoreFrom(url: string) {
 		const img = new Image();
 		img.onload = () => {
 			// clear & redraw
@@ -140,8 +148,8 @@
 		ctx.restore();
 	}
 
-	function drawPoint(x: number, y: number) {
-		drawLine(x, y, x, y, 1);
+	function drawPoint(x: number, y: number, pressure = 1) {
+		drawLine(x, y, x, y, pressure);
 	}
 
 	function onPointerDown(e: PointerEvent) {
@@ -157,13 +165,30 @@
 		const p = pointerPos(e);
 		lastX = p.x;
 		lastY = p.y;
-		drawPoint(p.x, p.y);
+		const pressure = e.pressure && e.pressure > 0 ? e.pressure : 1;
+		drawPoint(p.x, p.y, pressure);
 	}
 
-	function onPointerMove(e) {
+	function onPointerMove(e: PointerEvent) {
+		const pressure = e.pressure && e.pressure > 0 ? e.pressure : 1;
+		const lineWidth = Math.max(0.5, brushSize * pressure);
+		const pointerPosition = pointerPos(e);
+		const rect = pointerCanvas.getBoundingClientRect();
+		const px = pointerPosition.x;
+		const py = pointerPosition.y;
+		// draw pointer indicator
+		const pctx = pointerCtx;
+		pctx.clearRect(0, 0, pointerCanvas.width, pointerCanvas.height);
+		pctx.beginPath();
+		pctx.strokeStyle = '#ffffffaa';
+		//pctx.fillStyle = '#FFFFFF';
+		//pctx.fillRect(px - 20, py - 20, 40, 40);
+		pctx.lineWidth = 2;
+		pctx.arc(px, py, lineWidth / 4, 0, Math.PI * 2);
+		pctx.stroke();
+
 		if (!drawing) return;
 		const p = pointerPos(e);
-		const pressure = e.pressure && e.pressure > 0 ? e.pressure : 1;
 		drawLine(lastX, lastY, p.x, p.y, pressure);
 		lastX = p.x;
 		lastY = p.y;
@@ -251,7 +276,10 @@
 					// random number
 					const random = Math.random();
 					if (random > 0.95) {
-						seeds.push({ x, y });
+						seeds.push({
+							x: x * (rect.width / canvas.width),
+							y: y * (rect.height / canvas.height)
+						});
 					}
 					if (x < minX) minX = x;
 					if (y < minY) minY = y;
@@ -374,7 +402,7 @@
 	</style>
 </svelte:head>
 
-<div class="page relative">
+<div class="page relative p-10">
 	{#if enabled}
 		<button onclick={() => (active = !active)} class="top-right-btn" disabled={!enabled}>
 			{active ? 'Close' : 'Open'}</button
@@ -383,66 +411,74 @@
 	{#if !active}
 		<img {src} alt="Paintable" />
 	{:else}
-		<div class="overlay" onclick={() => (active = false)}>
-			<div class="card" style="--card-max: {maxCardWidth}px" onclick={(e) => e.stopPropagation()}>
-				<div class="card-header">
-					<div class="title">{cardTitle}</div>
-					<div class="spacer" />
-					<div class="toolbar">
-						<button
-							class="btn"
-							data-active={tool === 'brush'}
-							onclick={() => (tool = 'brush')}
-							title="Brush (B)">🖌️ Brush</button
-						>
-						<button
-							class="btn"
-							data-active={tool === 'eraser'}
-							onclick={() => (tool = 'eraser')}
-							title="Eraser (E)">🧽 Eraser</button
-						>
+		<button
+			class="overlay"
+			onclick={(e) => {
+				active = false;
+				e.stopPropagation();
+			}}>a</button
+		>
+		<div class="card relative place-self-center rounded-xl" style="--card-max: {maxCardWidth}px">
+			<button
+				class="z-100000 absolute -right-5 -top-5 size-10 cursor-pointer rounded-xl bg-gray-800"
+				onclick={() => (active = false)}
+				title="Close">✖️</button
+			>
+			<div class="card-header">
+				<div class="title">{cardTitle}</div>
+				<div class="spacer" />
+				<div class="toolbar">
+					<button
+						class="btn"
+						data-active={tool === 'brush'}
+						onclick={() => (tool = 'brush')}
+						title="Brush (B)">🖌️ Brush</button
+					>
+					<button
+						class="btn"
+						data-active={tool === 'eraser'}
+						onclick={() => (tool = 'eraser')}
+						title="Eraser (E)">🧽 Eraser</button
+					>
 
-						<div class="swatch" title="Color">
-							<input type="color" bind:value={brushColor} />
-						</div>
-
-						<div class="slider">
-							<label for="size">Size</label>
-							<input id="size" type="range" min="1" max="64" bind:value={brushSize} />
-							<span>{brushSize}px</span>
-						</div>
-
-						<button class="btn" onclick={undo} title="Undo (Ctrl/Cmd+Z)">↶ Undo</button>
-						<button class="btn" onclick={redo} title="Redo (Ctrl/Cmd+Shift+Z)">↷ Redo</button>
-						<button class="btn" onclick={clearCanvas} title="Clear overlay">🗑️ Clear</button>
-						<button class="btn" onclick={breakBones} title="Break!">🦴⚡ Break!</button>
+					<div class="swatch" title="Color">
+						<input type="color" bind:value={brushColor} />
 					</div>
-				</div>
 
-				<div class="canvas-wrap">
-					<img bind:this={imgEl} class="img-stage" {src} alt="Base" onload={onImageLoad} />
-
-					<canvas
-						bind:this={canvas}
-						class="draw"
-						onpointerdown={supportsPointer ? onPointerDown : null}
-						onpointermove={supportsPointer ? onPointerMove : null}
-						onpointerup={supportsPointer ? onPointerUp : null}
-						onpointerleave={supportsPointer ? onPointerUp : null}
-						onmousedown={!supportsPointer ? onPointerDown : null}
-						onmousemove={!supportsPointer ? onPointerMove : null}
-						onmouseup={!supportsPointer ? onPointerUp : null}
-						aria-label="Drawing canvas"
-					></canvas>
-				</div>
-
-				<div class="card-footer">
-					<div class="footer-left">
-						<span class="hint"
-							>Shortcuts: <b>B</b>=Brush, <b>E</b>=Eraser, <b>Ctrl/Cmd+Z</b>=Undo,
-							<b>Esc</b>=Back</span
-						>
+					<div class="slider">
+						<label for="size">Size</label>
+						<input id="size" type="range" min="1" max="64" bind:value={brushSize} />
+						<span>{brushSize}px</span>
 					</div>
+
+					<button class="btn" onclick={undo} title="Undo (Ctrl/Cmd+Z)">↶ Undo</button>
+					<button class="btn" onclick={redo} title="Redo (Ctrl/Cmd+Shift+Z)">↷ Redo</button>
+					<button class="btn" onclick={clearCanvas} title="Clear overlay">🗑️ Clear</button>
+					<button class="btn" onclick={breakBones} title="Break!">🦴⚡ Break!</button>
+				</div>
+			</div>
+
+			<div class="canvas-wrap">
+				<img bind:this={imgEl} class="img-stage" src={imageSrc} alt="Base" onload={onImageLoad} />
+
+				<canvas
+					bind:this={canvas}
+					class="draw z-1"
+					onpointerdown={supportsPointer ? onPointerDown : null}
+					onpointermove={supportsPointer ? onPointerMove : null}
+					onpointerup={supportsPointer ? onPointerUp : null}
+					onpointerleave={supportsPointer ? onPointerUp : null}
+					aria-label="Drawing canvas"
+				></canvas>
+				<canvas class="draw z-0" bind:this={pointerCanvas}></canvas>
+			</div>
+
+			<div class="card-footer">
+				<div class="footer-left">
+					<span class="hint"
+						>Shortcuts: <b>B</b>=Brush, <b>E</b>=Eraser, <b>Ctrl/Cmd+Z</b>=Undo,
+						<b>Esc</b>=Back</span
+					>
 				</div>
 			</div>
 		</div>
@@ -460,23 +496,19 @@
 		inset: 0; /* tblr = 0 */
 		background: rgba(0, 0, 0, 0.7);
 		display: flex;
-		justify-content: center;
-		align-items: center;
 		z-index: 1000; /* above all else */
 		padding: 2rem;
 	}
 
 	.card {
+		z-index: 1001;
 		display: flex;
 		flex-direction: column;
 		max-width: 900px;
 		max-height: 90vh;
 		width: min(90vw, var(--card-max));
 		background: #111214;
-		border: 1px solid #2a2b2f;
-		border-radius: 18px;
 		box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
-		overflow: hidden;
 	}
 	.card-header,
 	.card-footer {
@@ -591,18 +623,6 @@
 		width: calc(100% - 2rem);
 		height: calc(100% - 2rem);
 		touch-action: none; /* better pointer behavior on touch */
-	}
-
-	.footer-left,
-	.footer-right {
-		display: flex;
-		align-items: center;
-		gap: 0.75rem;
-		flex-wrap: wrap;
-	}
-	.file {
-		font-size: 0.85rem;
-		color: #cdd1d6;
 	}
 
 	@media (min-width: 700px) {

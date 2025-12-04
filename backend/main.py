@@ -12,7 +12,7 @@ app.include_router(fracture_tool4.router)
 # allow all cors because it probably doesn't matter in our case
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["http://localhost:5173"],
     allow_methods=["*"],
     allow_headers=["*"],
     allow_credentials=True,

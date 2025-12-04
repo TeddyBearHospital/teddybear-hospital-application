@@ -82,3 +82,19 @@ Currently, **Seafile** is the only officially supported storage backend.
 However, the application is designed to make it relatively easy to integrate other storage providers.
 
 To add a new storage solution:
+
+1. Create a new class that inherits from the `Storage` abstract base class located in `backend/storage/storage.py`.
+2. Implement all abstract methods defined in the `Storage` class. (Refer to the existing `SeafileStorage` class in `backend/storage/seafile_storage.py` for guidance.)
+3. Configuration options for your new storage class can be added to `backend/config.toml`. They will be automatically passed to your class constructor.
+3. Now you can use the new storage class by creating a section in `config.toml` with the name of your class. For example, if your class is named `MyStorage`, add the following section:
+
+   .. code-block:: toml
+
+      [[MyStorage]]
+      OPTION_1 = "value1"
+      OPTION_2 = "value2"
+
+    Replace `OPTION_1` and `OPTION_2` with the actual configuration options required by your storage class.
+
+
+    

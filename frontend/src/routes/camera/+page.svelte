@@ -1,8 +1,28 @@
 <script lang="ts">
 	import jsQR from 'jsqr';
-    import { PUBLIC_BACKEND_URL } from '$env/static/public';
-	import { Alert, Input, Label, Helper, Select, ButtonGroup, Button, type SelectOptionType, Card } from "flowbite-svelte";
-	import { BackwardStepOutline } from "flowbite-svelte-icons";
+	import { PUBLIC_BACKEND_URL } from '$env/static/public';
+	import {
+		Alert,
+		Input,
+		Label,
+		Helper,
+		Select,
+		ButtonGroup,
+		Button,
+		type SelectOptionType,
+		Card
+	} from 'flowbite-svelte';
+	import { BackwardStepOutline } from 'flowbite-svelte-icons';
+	import { onMount } from 'svelte';
+	import { goto } from '$app/navigation';
+
+	onMount(async () => {
+		console.log('Checking if logged in');
+		const loggedIn: boolean = await checkIfLoggedIn();
+		if (!loggedIn) {
+			goto('/login');
+		}
+	});
 
 	let videoElement: HTMLVideoElement;
 	let canvasElement: HTMLCanvasElement;
@@ -22,15 +42,15 @@
 	let animalTypes: Array<SelectOptionType<any>> = [];
 	let brokenBones = false;
 
-	let alert_message: string = $state("");
-	let alert_color: string = $state("red");
+	let alert_message: string = $state('');
+	let alert_color: string = $state('red');
 	fetch(`${PUBLIC_BACKEND_URL}/animal_types`, {
 		method: 'GET'
 	})
 		.then((data) => data.json())
 		.then((data) => {
-			for(let type of data.types){
-				animalTypes.push({value: type, name: type});
+			for (let type of data.types) {
+				animalTypes.push({ value: type, name: type });
 			}
 			animalTypes = animalTypes;
 		});
@@ -42,8 +62,7 @@
 			videoElement.srcObject = stream;
 			await videoElement.play();
 			scanInterval = setInterval(scanQRCode, 500);
-		} catch (err) {
-		}
+		} catch (err) {}
 	}
 
 	function stopQRScanner() {
@@ -107,9 +126,9 @@
 	}
 
 	async function uploadPhoto() {
-		if (!photoPreview || !firstName || !lastName || !animalName || !qrResult || !animalType) {
-			alert_message = "Please fill all fields and take a photo before uploading.";
-			alert_color = "red";
+		if (!photoPreview || !qrResult) {
+			alert_message = 'Please fill all fields and take a photo before uploading.';
+			alert_color = 'red';
 			return;
 		}
 
@@ -127,75 +146,77 @@
 			method: 'POST',
 			body: formData,
 			headers: {
-				'Authorization': `Bearer ${localStorage.getItem('session')}`
+				Authorization: `Bearer ${localStorage.getItem('session')}`
 			}
 		});
 
 		if (res.ok) {
 			alert_message = 'Upload successful!';
-			alert_color = "green";
+			alert_color = 'green';
 		} else {
 			alert_message = `Upload failed ${res.statusText}`;
-			alert_color = "red";
+			alert_color = 'red';
 		}
 	}
 
 	let allFieldsFilled = $derived(firstName && lastName && animalName);
 </script>
 
-
-	<div class="flex gap-1 flex-col h-full mb-2">
+<div class="mb-2 flex h-full flex-col gap-1">
 	{#if import.meta.env.DEV}
-	<button on:click={() => qrResult = qrResult ? "" : "a"}>toglle</button>
-	{/if} 
-{#if !qrResult }
-	<h1>Step 1: Scan QR Code</h1>
-	<!-- svelte-ignore a11y_media_has_caption -->
-		<div class="flex-auto flex items-center justify-center relative">
-	<video class="" bind:this={videoElement} autoplay></video>
-	<canvas class="" bind:this={canvasElement} style="display: none;"></canvas>
-	</div>
-	<button
-		on:click={startQRScanner}
-		class="rounded-xl cursor-pointer flex-initial w-1/2  mx-auto position-center bg-blue-600 px-2 py-1 text-sm font-medium text-white shadow transition-all hover:bg-blue-700 active:scale-95" disabled={isScanning} style="opacity: {isScanning ? 0.2 : 1};"
-		>Start QR Scanner</button
-	>
-{:else}
-	{#if alert_message !== ""}
-	<Alert color={alert_color} class="mb-2">
-		{alert_message}
-	</Alert>
+		<button on:click={() => (qrResult = qrResult ? '' : 'a')}>toglle</button>
 	{/if}
-	<div>
-	<Button 
-		onclick={() => qrResult=""} outline color="blue" class="w-20 float-start"><BackwardStepOutline class="shrink-0 h-6 w-6" />Back</Button>
-	<h1 class="place-self-center">
-		Step 2: Take picture of Patient.
-	</h1>
-	</div>	
-	<h2>QR Result: {qrResult}</h2>
-
-	<div class="mb-2 grid gap-2 md:grid-cols-2">
-		<div>
-			<Label for="first_name" class="mb-2">First Name</Label>
-			<Input id="first_name" placeholder="First Name" bind:value={firstName} />
-		</div>
-		<div>
-			<Label for="last_name" class="mb-2">Last Name</Label>
-			<Input id="last_name" placeholder="Last Name" bind:value={lastName} />
-		</div>
-		<div>
-			<Label for="animal_name" class="mb-2">Animal Name</Label>
-			<Input id="animal_name" placeholder="Animal Name" bind:value={animalName} />
-		</div>
-		<div>
-			<Label for="animal_type" class="mb-2">Animal Type</Label>
-			<Select class="mt-2" items={animalTypes} bind:value={animalType}></Select>
-		</div>
-	</div>
-
-		<Card class="flex flex-col items-center p-2 mb-2 gap-4 md:flex-row min-w-full min-h-96">
+	{#if !qrResult}
+		<h1>Step 1: Scan QR Code</h1>
 		<!-- svelte-ignore a11y_media_has_caption -->
+		<div class="relative flex flex-auto items-center justify-center">
+			<video class="" bind:this={videoElement} autoplay></video>
+			<canvas class="" bind:this={canvasElement} style="display: none;"></canvas>
+		</div>
+		<button
+			on:click={startQRScanner}
+			class="position-center mx-auto w-1/2 flex-initial cursor-pointer rounded-xl bg-blue-600 px-2 py-1 text-sm font-medium text-white shadow transition-all hover:bg-blue-700 active:scale-95"
+			disabled={isScanning}
+			style="opacity: {isScanning ? 0.2 : 1};">Start QR Scanner</button
+		>
+	{:else}
+		{#if alert_message !== ''}
+			<Alert color={alert_color} class="mb-2">
+				{alert_message}
+			</Alert>
+		{/if}
+		<div>
+			<Button onclick={() => (qrResult = '')} outline color="blue" class="float-start w-20"
+				><BackwardStepOutline class="h-6 w-6 shrink-0" />Back</Button
+			>
+			<h1 class="place-self-center">Step 2: Take picture of Patient.</h1>
+		</div>
+		<h2>QR Result: {qrResult}</h2>
+
+		<div class="mb-2 grid gap-2 md:grid-cols-2">
+			<div>
+				<Label for="first_name" class="mb-2">First Name</Label>
+				<Input id="first_name" placeholder="First Name" bind:value={firstName} />
+			</div>
+			<div>
+				<Label for="last_name" class="mb-2">Last Name</Label>
+				<Input id="last_name" placeholder="Last Name" bind:value={lastName} />
+			</div>
+			<div>
+				<Label for="animal_name" class="mb-2">Animal Name</Label>
+				<Input id="animal_name" placeholder="Animal Name" bind:value={animalName} />
+			</div>
+			<!-- {#if localStorage.getItem('enableAnimalType') === 'true'}
+			 	<div>
+			 		<Label for="animal_type" class="mb-2">Animal Type</Label>
+			 		<Select class="mt-2" items={animalTypes} bind:value={animalType}></Select>
+			 	</div>
+			 {/if}
+		-->
+		</div>
+
+		<Card class="mb-2 flex min-h-96 min-w-full flex-col items-center gap-4 p-2 md:flex-row">
+			<!-- svelte-ignore a11y_media_has_caption -->
 			<!-- Live Video Feed -->
 			<div class="flex-1">
 				<video bind:this={videoElement} autoplay class="w-full max-w-md rounded shadow"></video>
@@ -203,55 +224,59 @@
 
 			<!-- Captured Image Preview (only shown if available) -->
 			<div class="flex-1">
-					{#if photoPreview}
+				{#if photoPreview}
 					<img
 						src={photoPreview}
 						alt="Photo captured from camera"
 						class="w-full max-w-md rounded shadow"
 					/>
-					{/if}
-				</div>
+				{/if}
+			</div>
 		</Card>
 
 		<!-- Canvas (hidden) -->
 		<canvas bind:this={photoCanvas} style="display: none;"></canvas>
 
-			<ButtonGroup class="*:ring-primary-700! flex flex-row gap-1 w-2/3 place-self-center">
-			<Button outline
+		<ButtonGroup class="*:ring-primary-700! flex w-2/3 flex-row gap-1 place-self-center">
+			<Button
+				outline
 				onclick={startCamera}
-				class="rounded bg-blue-600 px-2 grow py-1 text-sm font-medium text-white shadow transition-all hover:bg-blue-600 active:scale-95 disabled:cursor-not-allowed disabled:opacity-30" disabled={cameraOn}
-				>Start Camera</Button
+				class="grow rounded bg-blue-600 px-2 py-1 text-sm font-medium text-white shadow transition-all hover:bg-blue-600 active:scale-95 disabled:cursor-not-allowed disabled:opacity-30"
+				disabled={cameraOn}>Start Camera</Button
 			>
-			<Button outline
+			<Button
+				outline
 				onclick={stopCamera}
-				class="rounded grow bg-blue-500 px-2 py-1 text-sm font-medium text-white shadow transition-all hover:bg-red-400 active:scale-95 disabled:cursor-not-allowed disabled:opacity-30" disabled={!cameraOn}
-				>Stop Camera</Button
+				class="grow rounded bg-blue-500 px-2 py-1 text-sm font-medium text-white shadow transition-all hover:bg-red-400 active:scale-95 disabled:cursor-not-allowed disabled:opacity-30"
+				disabled={!cameraOn}>Stop Camera</Button
 			>
-			<Button outline
+			<Button
+				outline
 				onclick={capturePhoto}
-				class="rounded grow bg-green-600 px-2 py-1 text-sm font-medium text-white shadow transition-all hover:bg-green-700 active:scale-95 disabled:cursor-not-allowed" style="opacity: {photoPreview || !cameraOn ? 0.5 : 1};" disabled={!cameraOn}
-				>{photoPreview ? "Recapture Photo" : "Capture Photo"}</Button
+				class="grow rounded bg-green-600 px-2 py-1 text-sm font-medium text-white shadow transition-all hover:bg-green-700 active:scale-95 disabled:cursor-not-allowed"
+				style="opacity: {photoPreview || !cameraOn ? 0.5 : 1};"
+				disabled={!cameraOn}>{photoPreview ? 'Recapture Photo' : 'Capture Photo'}</Button
 			>
 
-			<Button outline
+			<Button
+				outline
 				onclick={uploadPhoto}
 				class="rounded bg-yellow-600 px-4 py-2 font-semibold text-white shadow transition-all hover:bg-yellow-700 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
 				disabled={!photoPreview}
 			>
 				Upload Photo with Data
 			</Button>
+		</ButtonGroup>
+		{#if !photoPreview}
+			<span
+				class="absolute bottom-full left-1/2 z-10 mb-2 -translate-x-1/2 scale-0 whitespace-nowrap rounded bg-gray-800 px-2 py-1 text-xs text-white transition-transform group-hover:scale-100"
+			>
+				Please take a photo before uploading
+			</span>
+		{/if}
+	{/if}
+</div>
 
-			</ButtonGroup>
-			{#if !photoPreview}
-				<span
-					class="absolute bottom-full left-1/2 z-10 mb-2 -translate-x-1/2 scale-0 whitespace-nowrap rounded bg-gray-800 px-2 py-1 text-xs text-white transition-transform group-hover:scale-100"
-				>
-					Please take a photo before uploading
-				</span>
-			{/if}
-{/if}
-
-	</div>
 <style>
 	video,
 	canvas,

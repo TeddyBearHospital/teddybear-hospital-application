@@ -133,6 +133,17 @@ def validate_token(token: Annotated[str, Depends(oauth2_scheme)]) -> bool:
     return True
 
 
+"""Verify if token still valid
+    Returns:
+        bool: True if the token is valid.
+"""
+
+
+@router.get("/verify_token")
+def verify_token(valid: Annotated[bool, Depends(validate_token)]):
+    return True
+
+
 qr_generation_progress: float = 0.0
 
 """Generates QR codes in the background.
@@ -595,10 +606,16 @@ async def get_carousel_list(request: Request):
     # Returns a list of URLs to fetch carousel images.
     carousel_items = job_queue.get_carousel()
     return JSONResponse(
-        content=[
-            str(request.url_for("get_carousel_image", index=i))
-            for i in range(len(carousel_items))
-        ]
+        content={
+            "originals": [
+                str(request.url_for("get_carousel_image", index=i, option="original"))
+                for i in range(len(carousel_items))
+            ],
+            "xrays": [
+                str(request.url_for("get_carousel_image", index=i, option="xray"))
+                for i in range(len(carousel_items))
+            ],
+        }
     )
 
 
@@ -612,8 +629,8 @@ async def get_carousel_list(request: Request):
 """
 
 
-@router.get("/carousel/{index}")
-async def get_carousel_image(index: int):
+@router.get("/carousel/{index}/{option}", response_class=StreamingResponse)
+async def get_carousel_image(index: int, option: Annotated[str, Path()]):
     carousel = job_queue.get_carousel()
     if index < 0 or index >= len(carousel):
         return Response(status_code=404)
@@ -621,13 +638,13 @@ async def get_carousel_image(index: int):
     xray_file, original_file = carousel[index]
     await xray_file.seek(0)
     await original_file.seek(0)
-
-    zip_buffer = io.BytesIO()
-    with zipfile.ZipFile(zip_buffer, "w") as zip_file:
-        zip_file.writestr("xray.png", await xray_file.read())
-        zip_file.writestr("original.png", await original_file.read())
-    zip_buffer.seek(0)
-
-    headers = {"Content-Disposition": f"attachment; filename=carousel_{index}.zip"}
-
-    return StreamingResponse(zip_buffer, media_type="application/zip", headers=headers)
+    if option == "xray":
+        return StreamingResponse(
+            content=xray_file,
+            media_type="image/png",
+        )
+    elif option == "original":
+        return StreamingResponse(
+            content=original_file,
+            media_type="image/png",
+        )

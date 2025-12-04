@@ -1,11 +1,13 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onDestroy, onMount } from 'svelte';
 	import { PUBLIC_BACKEND_URL } from '$env/static/public';
 	import { fade, blur } from 'svelte/transition';
 	import { flip } from 'svelte/animate';
-	import { Card, Popover } from 'flowbite-svelte';
+	import { Card, Popover, ImagePlaceholder } from 'flowbite-svelte';
 	import Toast from './Toast.svelte';
 	import PaintableImage from '../dev/PaintableImage.svelte';
+	import { checkIfLoggedIn } from '$lib/images/login/login';
+	import { goto } from '$app/navigation';
 
 	let data = $state(new Map<string, string[]>()); // 64-bit encoded
 	let loading = $state(true);
@@ -48,10 +50,20 @@
 			loading = false;
 		}
 	}
-	onMount(() => {
+
+	let interval: NodeJS.Timeout;
+	onMount(async () => {
+		console.log('Checking if logged in');
+		const loggedIn: boolean = await checkIfLoggedIn();
+		if (!loggedIn) {
+			goto('/login');
+		}
 		fetchData();
-		const interval = setInterval(fetchData, 1000); // Poll every 5s
-		return () => clearInterval(interval);
+		interval = setInterval(fetchData, 1000); // Poll every 5s
+	});
+
+	onDestroy(() => {
+		clearInterval(interval);
 	});
 
 	async function confirmJob(jobid: number, choice: number, confirm: string) {
@@ -150,20 +162,20 @@
 						<img
 							class="aspect-1/1 w-full rounded-t-md"
 							alt="noooo"
-							src={originals.get(job_id.toString())}
+							src={originals.get(results[0])}
 						/>
-						{metadata.get(job_id.toString())?.first_name +
+						{metadata.get(results[0])?.first_name +
 							' ' +
-							metadata.get(job_id.toString())?.last_name +
+							metadata.get(results[0])?.last_name +
 							"'s " +
-							metadata.get(job_id.toString())?.animal_name}
+							metadata.get(results[0])?.animal_name}
 					</Card>
 					{#each results[1] as image, index (index)}
 						<div class="col-span-1 grid grid-cols-1 grid-cols-subgrid">
 							{#snippet resultImage(url: string, enabled: boolean)}
 								<div transition:fade class="col-start-1 row-start-1">
 									<div class="result-images aspect-1/1 w-full rounded-t-md">
-										<PaintableImage imageSrc={url} enabled={enabled} />
+										<PaintableImage imageSrc={url} {enabled} />
 									</div>
 									<button
 										disabled={!enabled}
@@ -173,7 +185,7 @@
 								</div>
 							{/snippet}
 							{#if image === 'nonsense'}
-								{@render resultImage(`result_placeholder.png`, false)}
+								{@render resultImage(`placeholder1.jpg`, false)}
 							{:else}
 								{@render resultImage(`${image}`, true)}
 							{/if}
