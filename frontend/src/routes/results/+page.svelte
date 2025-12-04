@@ -3,7 +3,7 @@
 	import { PUBLIC_BACKEND_URL } from '$env/static/public';
 	import { fade, blur } from 'svelte/transition';
 	import { flip } from 'svelte/animate';
-	import { Card, Popover } from 'flowbite-svelte';
+	import { Card, Popover, ImagePlaceholder } from 'flowbite-svelte';
 	import Toast from './Toast.svelte';
 	import PaintableImage from '../dev/PaintableImage.svelte';
 	import { checkIfLoggedIn } from '$lib/images/login/login';
@@ -185,7 +185,7 @@
 								</div>
 							{/snippet}
 							{#if image === 'nonsense'}
-								{@render resultImage(`result_placeholder.png`, false)}
+								{@render resultImage(`placeholder1.jpg`, false)}
 							{:else}
 								{@render resultImage(`${image}`, true)}
 							{/if}

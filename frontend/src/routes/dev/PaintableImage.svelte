@@ -381,9 +381,11 @@
 </svelte:head>
 
 <div class="page relative p-10">
-	<button onclick={() => (active = !active)} class="top-right-btn" disabled={!enabled}>
-		{active ? 'Close' : 'Open'}</button
-	>
+	{#if enabled}
+		<button onclick={() => (active = !active)} class="top-right-btn" disabled={!enabled}>
+			{active ? 'Close' : 'Open'}</button
+		>
+	{/if}
 	{#if !active}
 		<img src={imageSrc} alt="Paintable" />
 	{:else}

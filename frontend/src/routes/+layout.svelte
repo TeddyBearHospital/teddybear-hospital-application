@@ -15,7 +15,13 @@
 	});
 </script>
 
-<div class="app light h-screen max-h-full">
+<div
+	style="background-image: url('background-light.png');
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+  background-size: cover;"
+	class="app light h-screen max-h-full"
+>
 	<Header />
 
 	<main>
