@@ -5,6 +5,7 @@
 	import { Tabs, TabItem } from 'flowbite-svelte';
 	import { onMount, onDestroy } from 'svelte';
 	import { goto } from '$app/navigation';
+	import { checkIfLoggedIn } from '$lib/images/login/login';
 
 	let carouselUrls: string[] = $state([]);
 	let originals: string[] = $state([]);
