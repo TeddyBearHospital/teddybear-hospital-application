@@ -4,6 +4,7 @@
 	import { PUBLIC_BACKEND_URL } from '$env/static/public';
 	import { Tabs, TabItem } from 'flowbite-svelte';
 	import { onMount, onDestroy } from 'svelte';
+	import { goto } from '$app/navigation';
 
 	let carouselUrls: string[] = $state([]);
 	let originals: string[] = $state([]);
@@ -17,7 +18,12 @@
 		originals = json.originals;
 		xrays = json.xrays;
 	}
-	onMount(() => {
+	onMount(async () => {
+		console.log('Checking if logged in');
+		const loggedIn: boolean = await checkIfLoggedIn();
+		if (!loggedIn) {
+			goto('/login');
+		}
 		fetchCarouselUrls();
 		fetchInterval = setInterval(fetchCarouselUrls, 10000);
 	});

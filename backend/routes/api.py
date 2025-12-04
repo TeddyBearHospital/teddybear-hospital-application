@@ -128,6 +128,17 @@ def validate_token(token: Annotated[str, Depends(oauth2_scheme)]) -> bool:
     return True
 
 
+"""Verify if token still valid
+    Returns:
+        bool: True if the token is valid.
+"""
+
+
+@router.get("/verify_token")
+def verify_token(valid: Annotated[bool, Depends(validate_token)]):
+    return True
+
+
 qr_generation_progress: float = 0.0
 
 """Generates QR codes in the background.

@@ -1,11 +1,13 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onDestroy, onMount } from 'svelte';
 	import { PUBLIC_BACKEND_URL } from '$env/static/public';
 	import { fade, blur } from 'svelte/transition';
 	import { flip } from 'svelte/animate';
 	import { Card, Popover } from 'flowbite-svelte';
 	import Toast from './Toast.svelte';
 	import PaintableImage from '../dev/PaintableImage.svelte';
+	import { checkIfLoggedIn } from '$lib/images/login/login';
+	import { goto } from '$app/navigation';
 
 	let data = $state(new Map<string, string[]>()); // 64-bit encoded
 	let loading = $state(true);
@@ -48,10 +50,20 @@
 			loading = false;
 		}
 	}
-	onMount(() => {
+
+	let interval: NodeJS.Timeout;
+	onMount(async () => {
+		console.log('Checking if logged in');
+		const loggedIn: boolean = await checkIfLoggedIn();
+		if (!loggedIn) {
+			goto('/login');
+		}
 		fetchData();
-		const interval = setInterval(fetchData, 1000); // Poll every 5s
-		return () => clearInterval(interval);
+		interval = setInterval(fetchData, 1000); // Poll every 5s
+	});
+
+	onDestroy(() => {
+		clearInterval(interval);
 	});
 
 	async function confirmJob(jobid: number, choice: number, confirm: string) {
