@@ -15,6 +15,7 @@
 	import { BackwardStepOutline } from 'flowbite-svelte-icons';
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
+	import { checkIfLoggedIn } from '$lib/images/login/login';
 
 	onMount(async () => {
 		console.log('Checking if logged in');
